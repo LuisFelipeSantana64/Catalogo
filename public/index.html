@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Catálogo</title>
+    <link rel="stylesheet" href="estilo/style.css">
+</head>
+<body>
+    <h1>Meu Catálogo</h1>
+    
+    <form action="/salvar" method="POST">
+        <h2>Cadastrar Novo Item</h2>
+        
+        <input type="text" name="nome" required placeholder="Nome do Item">
+        <input type="text" name="categoria" required placeholder="Categoria (Filme, Livro...)">
+        <input type="text" name="descricao" required placeholder="Descrição/Resumo">
+        <input type="text" name="preco_nota" required placeholder="Preço ou Nota">
+        
+        <button type="submit">Cadastrar Item</button>
+    </form>
+
+    <hr>
+
+    <div style="text-align: center; margin: 20px;">
+        <button id="loadPostsBtn">Carregar Catálogo</button>
+    </div>
+
+    <div id="postList" class="grade-cards"></div>
+
+    <script src="scripts/script.js"></script>
+</body>
+</html>
