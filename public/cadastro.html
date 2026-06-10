@@ -18,35 +18,25 @@
     </form>
 
     <script>
-        document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Impede o recarregamento padrão da página
-
+        document.getElementById('cadastroForm').addEventListener('submit', (e) => {
+            e.preventDefault();
             const nome = document.getElementById('nome').value;
             const email = document.getElementById('email').value;
             const senha = document.getElementById('senha').value;
 
-            try {
-                const response = await fetch('/api/auth/cadastro', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify({ nome, email, senha })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    // Exibe a mensagem de erro exata gerada pelo back-end
-                    alert(data.error || 'Erro ao realizar o cadastro.');
-                } else {
-                    alert('Cadastro realizado com sucesso! Redirecionando para o login...');
+            fetch('/api/auth/cadastro', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nome, email, senha })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) { alert(data.error); }
+                else {
+                    alert('Cadastro realizado! Redirecionando para o login...');
                     window.location.href = 'login.html';
                 }
-            } catch (error) {
-                console.error('Erro na requisição:', error);
-                alert('Não foi possível conectar ao servidor. Tente novamente mais tarde.');
-            }
+            });
         });
     </script>
 </body>

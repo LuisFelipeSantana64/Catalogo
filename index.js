@@ -6,7 +6,7 @@ const express = require('express');
 const mysql = require('mysql2');
 const app = express();
 
-// 2. MIDDLEWARES DE PARSE
+// 2. MIDDLEWARES DE PARSE (Obrigatório vir antes de arquivos estáticos e rotas!)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -32,9 +32,17 @@ const db = mysql.createPool({
 db.getConnection((err, connection) => {
     if (err) {
         console.error('❌ ERRO CRÍTICO: Não foi possível conectar ao Pool do Aiven!');
+        console.error('Detalhes do erro:', err.message);
     } else {
         console.log('🚀 SUCESSO: O Node.js criou o Pool e está autenticado no Aiven!');
-        connection.release();
+        connection.query('SELECT 1 + 1 AS teste', (testErr) => {
+            connection.release();
+            if (testErr) {
+                console.error('❌ Erro ao testar comandos:', testErr.message);
+            } else {
+                console.log('✅ Banco de dados respondendo perfeitamente via Pool!');
+            }
+        });
     }
 });
 
@@ -45,12 +53,18 @@ db.getConnection((err, connection) => {
 // ROTA: Cadastro de Usuário
 app.post('/api/auth/cadastro', (req, res) => {
     const { nome, email, senha } = req.body;
+    
+    // Log de segurança para você ver no painel do Render o que está chegando
+    console.log("📥 Dados recebidos no servidor:", { nome, email, senha: senha ? "••••••••" : null });
+    
     if (!nome || !email || !senha) {
         return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
     }
+
     const sql = 'INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)';
     db.query(sql, [nome, email, senha], (err, result) => {
         if (err) {
+            console.error("❌ Erro ao inserir usuário no banco:", err.message);
             if (err.code === 'ER_DUP_ENTRY') {
                 return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
             }
@@ -60,41 +74,31 @@ app.post('/api/auth/cadastro', (req, res) => {
     });
 });
 
-// ROTA: Login de Usuário (Retorna ID e Nome para o Front-end)
+// ROTA: Login de Usuário
 app.post('/api/auth/login', (req, res) => {
     const { email, senha } = req.body;
+    
     if (!email || !senha) {
         return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
     }
+
     const sql = 'SELECT id, nome FROM usuarios WHERE email = ? AND senha = ?';
     db.query(sql, [email, senha], (err, results) => {
         if (err) {
+            console.error("❌ Erro ao buscar usuário no login:", err.message);
             return res.status(500).json({ error: 'Erro interno no servidor.' });
         }
         if (results.length === 0) {
             return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
         }
-        res.json({ user: results[0] }); // Envia o id e o nome do usuário logado
+        res.json({ user: results[0] });
     });
 });
 
-// ROTA: Listar Itens (AGORA COM INNER JOIN PARA TRAZER O NOME DO CRIADOR)
+// ROTA: Listar Itens
 app.get('/api/itens', (req, res) => {
     const usuarioLogadoId = req.headers['x-user-id'] || 0;
-    
-    // O comando INNER JOIN busca a coluna 'nome' na tabela 'usuarios' com base no 'usuario_id'
-    const sql = `
-        SELECT 
-            itens.id, 
-            itens.nome, 
-            itens.categoria, 
-            itens.descricao, 
-            itens.preco_nota, 
-            itens.usuario_id,
-            usuarios.nome AS nome_usuario 
-        FROM itens
-        INNER JOIN usuarios ON itens.usuario_id = usuarios.id
-    `;
+    const sql = 'SELECT * FROM itens';
     
     db.query(sql, (err, results) => {
         if (err) {
@@ -118,6 +122,7 @@ app.post('/salvar', (req, res) => {
     const sql = 'INSERT INTO itens (nome, categoria, descricao, preco_nota, usuario_id) VALUES (?, ?, ?, ?, ?)';
     db.query(sql, [nome, categoria, descricao, preco_nota, usuario_id], (err, result) => {
         if (err) {
+            console.error("❌ Erro ao salvar novo item:", err.message);
             return res.status(500).send(err);
         }
         res.redirect('/'); 
@@ -130,6 +135,7 @@ app.delete('/api/itens/:id', (req, res) => {
     const sql = 'DELETE FROM itens WHERE id = ?';
     db.query(sql, [id], (err, result) => {
         if (err) {
+            console.error("❌ Erro ao deletar item:", err.message);
             return res.status(500).send(err);
         }
         res.json({ message: 'Deletado com sucesso!' });
