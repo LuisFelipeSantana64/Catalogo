@@ -97,7 +97,6 @@ app.post('/api/auth/login', (req, res) => {
 
 // 3. ROTA: Listar Itens (Identifica se o item pertence ao usuário logado)
 app.get('/api/itens', (req, res) => {
-    // Captura o ID do usuário enviado pelo cabeçalho do Front-end
     const usuarioLogadoId = req.headers['x-user-id'] || 0;
     const sql = 'SELECT * FROM itens';
     
@@ -107,7 +106,6 @@ app.get('/api/itens', (req, res) => {
             return res.status(500).send(err);
         }
         
-        // Mapeia os dados acrescentando a flag true/false caso pertença ao usuário atual
         const itensTratados = results.map(item => ({
             ...item,
             e_do_usuario: item.usuario_id == usuarioLogadoId
@@ -136,9 +134,8 @@ app.post('/salvar', (req, res) => {
     });
 });
 
-// 5. ROTA: Deletar Item do Catálogo
-app.delete('/api/itens/:id', (req, id_ou_res) => {
-    const res = id_ou_res; // Tratamento simples de parâmetros
+// 5. ROTA: Deletar Item do Catálogo (Assinatura corrigida para o padrão do Express)
+app.delete('/api/itens/:id', (req, res) => {
     const id = req.params.id;
     const sql = 'DELETE FROM itens WHERE id = ?';
 
