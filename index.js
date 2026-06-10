@@ -128,7 +128,7 @@ app.get('/api/itens', (req, res) => {
     });
 });
 
-// ROTA: Salvar Novo Item
+
 app.post('/salvar', (req, res) => {
     const { nome, categoria, descricao, preco_nota, usuario_id } = req.body;
     if (!usuario_id) {
