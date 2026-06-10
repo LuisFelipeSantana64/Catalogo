@@ -128,6 +128,7 @@ app.get('/api/itens', (req, res) => {
     });
 });
 
+// ROTA: Salvar Novo Item
 app.post('/salvar', (req, res) => {
     const { nome, categoria, descricao, preco_nota, usuario_id } = req.body;
     if (!usuario_id) {
@@ -143,6 +144,7 @@ app.post('/salvar', (req, res) => {
     });
 });
 
+// ROTA: Deletar Item
 app.delete('/api/itens/:id', (req, res) => {
     const id = req.params.id;
     const sql = 'DELETE FROM itens WHERE id = ?';
@@ -155,6 +157,7 @@ app.delete('/api/itens/:id', (req, res) => {
     });
 });
 
+// INICIALIZAÇÃO
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor rodando perfeitamente em http://localhost:${PORT}`);
