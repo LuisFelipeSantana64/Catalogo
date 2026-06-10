@@ -54,7 +54,6 @@ db.getConnection((err, connection) => {
 app.post('/api/auth/cadastro', (req, res) => {
     const { nome, email, senha } = req.body;
     
-    // Log de segurança para você ver no painel do Render o que está chegando
     console.log("📥 Dados recebidos no servidor:", { nome, email, senha: senha ? "••••••••" : null });
     
     if (!nome || !email || !senha) {
@@ -95,10 +94,26 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-// ROTA: Listar Itens
+// ==========================================================================
+// ROTA ATUALIZADA: LISTAR ITENS COM INNER JOIN
+// ==========================================================================
 app.get('/api/itens', (req, res) => {
     const usuarioLogadoId = req.headers['x-user-id'] || 0;
-    const sql = 'SELECT * FROM itens';
+    
+    // Mudamos o comando SQL para cruzar os dados com a tabela de usuários 
+    // e trazer o campo 'nome_usuario' preenchido corretamente.
+    const sql = `
+        SELECT 
+            itens.id, 
+            itens.nome, 
+            itens.categoria, 
+            itens.descricao, 
+            itens.preco_nota, 
+            itens.usuario_id,
+            usuarios.nome AS nome_usuario 
+        FROM itens
+        INNER JOIN usuarios ON itens.usuario_id = usuarios.id
+    `;
     
     db.query(sql, (err, results) => {
         if (err) {
