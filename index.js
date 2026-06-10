@@ -1,4 +1,4 @@
-// Carrega as variáveis do arquivo .env (DEVE SER A PRIMEIRA LINHA DO CÓDIGO)
+// 1. CARREGAMENTO DE VARIÁVEIS (Primeira linha sempre)
 require('dotenv').config();
 
 const path = require('path');
@@ -6,13 +6,14 @@ const express = require('express');
 const mysql = require('mysql2');
 const app = express();
 
-app.use(express.urlencoded({ extended: true }));
+// 2. MIDDLEWARES DE PARSE (Obrigatório vir antes de arquivos estáticos e rotas!)
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Garante que os arquivos da pasta public (HTML, CSS, JS) sejam servidos corretamente
+// 3. ARQUIVOS ESTÁTICOS
 app.use(express.static(path.join(__dirname, 'public')));
 
-// CONFIGURAÇÃO SEGURA DO POOL COM VARIÁVEIS DE AMBIENTE
+// 4. CONFIGURAÇÃO DO POOL COM O BANCO
 const db = mysql.createPool({
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -23,39 +24,38 @@ const db = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0,
     ssl: {
-        rejectUnauthorized: false // CRUCIAL para o Aiven aceitar conexões externas
+        rejectUnauthorized: false
     }
 });
 
-// TESTE REAL DE CONEXÃO COM O POOL
+// 5. TESTE DE CONEXÃO
 db.getConnection((err, connection) => {
     if (err) {
         console.error('❌ ERRO CRÍTICO: Não foi possível conectar ao Pool do Aiven!');
         console.error('Detalhes do erro:', err.message);
-        console.error('Código do erro:', err.code);
     } else {
         console.log('🚀 SUCESSO: O Node.js criou o Pool e está autenticado no Aiven!');
-        
-        // Teste de comando usando a conexão ativa do Pool
         connection.query('SELECT 1 + 1 AS teste', (testErr) => {
-            connection.release(); // Libera a conexão de volta para o pool após o teste
-            
+            connection.release();
             if (testErr) {
-                console.error('❌ O banco conectou, mas falhou ao executar comandos:', testErr.message);
+                console.error('❌ Erro ao testar comandos:', testErr.message);
             } else {
-                console.log('✅ Banco de dados respondendo a comandos via Pool perfeitamente!');
+                console.log('✅ Banco de dados respondendo perfeitamente via Pool!');
             }
         });
     }
 });
 
 // ==========================================================================
-// ROTAS DA APLICAÇÃO (CINEBOOK TRACKER)
+// ROTAS DA APLICAÇÃO
 // ==========================================================================
 
-// 1. ROTA: Cadastro de Usuário
+// ROTA: Cadastro de Usuário
 app.post('/api/auth/cadastro', (req, res) => {
     const { nome, email, senha } = req.body;
+    
+    // Log de segurança para você ver no painel do Render o que está chegando
+    console.log("📥 Dados recebidos no servidor:", { nome, email, senha: senha ? "••••••••" : null });
     
     if (!nome || !email || !senha) {
         return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
@@ -68,13 +68,13 @@ app.post('/api/auth/cadastro', (req, res) => {
             if (err.code === 'ER_DUP_ENTRY') {
                 return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
             }
-            return res.status(400).json({ error: 'Erro interno ao processar o cadastro.' });
+            return res.status(500).json({ error: 'Erro interno ao processar o cadastro.' });
         }
         res.status(201).json({ message: 'Usuário cadastrado com sucesso!' });
     });
 });
 
-// 2. ROTA: Login de Usuário
+// ROTA: Login de Usuário
 app.post('/api/auth/login', (req, res) => {
     const { email, senha } = req.body;
     
@@ -95,60 +95,54 @@ app.post('/api/auth/login', (req, res) => {
     });
 });
 
-// 3. ROTA: Listar Itens (Identifica se o item pertence ao usuário logado)
+// ROTA: Listar Itens
 app.get('/api/itens', (req, res) => {
     const usuarioLogadoId = req.headers['x-user-id'] || 0;
     const sql = 'SELECT * FROM itens';
     
     db.query(sql, (err, results) => {
         if (err) {
-            console.error("❌ Erro ao listar itens do banco:", err.message);
+            console.error("❌ Erro ao listar itens:", err.message);
             return res.status(500).send(err);
         }
-        
         const itensTratados = results.map(item => ({
             ...item,
             e_do_usuario: item.usuario_id == usuarioLogadoId
         }));
-        
         res.json(itensTratados);
     });
 });
 
-// 4. ROTA: Salvar Novo Item (Filme/Livro) vinculado ao criador
+// ROTA: Salvar Novo Item
 app.post('/salvar', (req, res) => {
     const { nome, categoria, descricao, preco_nota, usuario_id } = req.body;
-    
     if (!usuario_id) {
         return res.status(401).send("Usuário não identificado. Faça login novamente.");
     }
-
     const sql = 'INSERT INTO itens (nome, categoria, descricao, preco_nota, usuario_id) VALUES (?, ?, ?, ?, ?)';
-    
     db.query(sql, [nome, categoria, descricao, preco_nota, usuario_id], (err, result) => {
         if (err) {
-            console.error("❌ Erro ao salvar novo item no banco:", err.message);
+            console.error("❌ Erro ao salvar novo item:", err.message);
             return res.status(500).send(err);
         }
         res.redirect('/'); 
     });
 });
 
-// 5. ROTA: Deletar Item do Catálogo (Assinatura corrigida para o padrão do Express)
+// ROTA: Deletar Item
 app.delete('/api/itens/:id', (req, res) => {
     const id = req.params.id;
     const sql = 'DELETE FROM itens WHERE id = ?';
-
     db.query(sql, [id], (err, result) => {
         if (err) {
-            console.error("❌ Erro ao deletar item do banco:", err.message);
+            console.error("❌ Erro ao deletar item:", err.message);
             return res.status(500).send(err);
         }
         res.json({ message: 'Deletado com sucesso!' });
     });
 });
 
-// INICIALIZAÇÃO DO SERVIDOR
+// INICIALIZAÇÃO
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor rodando perfeitamente em http://localhost:${PORT}`);
