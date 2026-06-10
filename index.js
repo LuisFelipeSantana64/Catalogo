@@ -144,7 +144,6 @@ app.post('/salvar', (req, res) => {
     });
 });
 
-// ROTA: Deletar Item
 app.delete('/api/itens/:id', (req, res) => {
     const id = req.params.id;
     const sql = 'DELETE FROM itens WHERE id = ?';
